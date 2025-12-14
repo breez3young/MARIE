@@ -109,7 +109,7 @@ class DreamerLearner:
                                   ### used for continuous action discretization
                                   action_bins = config.action_bins, action_low=action_low, action_high=action_high, combine_action = combine_action,
                                   ### used for setting the prediction head
-                                  use_symlog=False, use_ce_for_end=config.use_ce_for_end, use_ce_for_av_action=config.use_ce_for_av_action, enable_av_pred=(config.ENV_TYPE == Env.STARCRAFT),
+                                  use_symlog=False, use_ce_for_end=config.use_ce_for_end, use_ce_for_av_action=config.use_ce_for_av_action, enable_av_pred=(config.ENV_TYPE in [Env.STARCRAFT, Env.SMAX]),
                                   use_ce_for_reward=config.use_ce_for_r, rewards_prediction_config=config.rewards_prediction_config).to(config.DEVICE).eval()
         # -------------------------
 
@@ -119,7 +119,7 @@ class DreamerLearner:
 
         # based on reconstructed obs
         if not self.config.use_stack:
-            if config.CONTINUOUS_ACTION or self.env_type != Env.STARCRAFT:
+            if config.CONTINUOUS_ACTION or self.env_type not in [Env.STARCRAFT, Env.SMAX]:
                 print(f"Use continuous action policy.")
                 self.actor = StochasticPolicy(config.IN_DIM, config.ACTION_SIZE, config.ACTION_HIDDEN, config.ACTION_LAYERS,
                                               continuous_action=config.CONTINUOUS_ACTION, continuous_action_space=config.ACTION_SPACE).to(config.DEVICE)
@@ -131,7 +131,7 @@ class DreamerLearner:
         
         else:
             print(f"Use stacking observation mode. Currently stack {config.stack_obs_num} observations for decision making.")
-            if config.CONTINUOUS_ACTION or self.env_type != Env.STARCRAFT:
+            if config.CONTINUOUS_ACTION or self.env_type not in [Env.STARCRAFT, Env.SMAX]:
                 print(f"Use continuous action policy.")
                 self.actor = StochasticPolicy(config.IN_DIM * config.stack_obs_num, config.ACTION_SIZE, config.ACTION_HIDDEN, config.ACTION_LAYERS,
                                               continuous_action=config.CONTINUOUS_ACTION, continuous_action_space=config.ACTION_SPACE).to(config.DEVICE)
@@ -141,7 +141,7 @@ class DreamerLearner:
                 self.actor = Actor(config.IN_DIM * config.stack_obs_num, config.ACTION_SIZE, config.ACTION_HIDDEN, config.ACTION_LAYERS).to(config.DEVICE)
                 self.critic = AugmentedCritic(config.IN_DIM * config.stack_obs_num, config.HIDDEN).to(config.DEVICE)
 
-        if not config.CONTINUOUS_ACTION and self.env_type == Env.STARCRAFT:
+        if not config.CONTINUOUS_ACTION and self.env_type in [Env.STARCRAFT, Env.SMAX]:
             initialize_weights(self.actor)
             initialize_weights(self.critic, mode='xavier')
 
@@ -168,7 +168,7 @@ class DreamerLearner:
         self.n_agents = 2
         Path(config.LOG_FOLDER).mkdir(parents=True, exist_ok=True)
 
-        self.tqdm_vis = False
+        self.tqdm_vis = True
         self.use_valuenorm = config.use_valuenorm
         self.use_huber_loss = config.use_huber_loss
         self.use_clipped_value_loss = config.use_clipped_value_loss
@@ -423,7 +423,7 @@ class DreamerLearner:
             adv = returns.detach() - self.critic(critic_feat).detach()
 
 
-        if self.env_type in [Env.STARCRAFT, Env.GRF, Env.MAMUJOCO]:
+        if self.env_type in [Env.STARCRAFT, Env.GRF, Env.MAMUJOCO, Env.SMAX]:
             adv = advantage(adv)
         elif self.env_type == Env.PETTINGZOO:
             pass
@@ -508,7 +508,7 @@ class DreamerLearner:
 
     ## add data to dataset
     def add_experience_to_dataset(self, data):
-        if self.env_type == Env.STARCRAFT:
+        if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
             episode = SC2Episode(
                 observation=torch.FloatTensor(data['observation'].copy()),              # (Length, n_agents, obs_dim)
                 action=torch.FloatTensor(data['action'].copy()),                        # (Length, n_agents, act_dim)

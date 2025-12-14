@@ -1,8 +1,8 @@
 from agent.learners.DreamerLearner import DreamerLearner
-from configs.dreamer.DreamerAgentConfig import DreamerConfig
+from configs.dreamer.smax.SMAXAgentConfig import SMAXDreamerConfig
 
 
-class DreamerLearnerConfig(DreamerConfig):
+class SMAXDreamerLearnerConfig(SMAXDreamerConfig):
     def __init__(self):
         super().__init__()
         # optimal smac config

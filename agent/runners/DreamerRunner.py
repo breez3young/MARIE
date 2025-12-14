@@ -103,6 +103,9 @@ class DreamerRunner:
             if self.env_type == Env.STARCRAFT:
                 wandb.log({'win': info["reward"], 'steps': cur_steps})
                 print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f'Win: {info["reward"]}', 'Returns: %.4f' % returns, f"Entropy: {ent_str}", sep=' | ')
+            elif self.env_type == Env.SMAX:
+                wandb.log({'win': info["reward"], 'steps': cur_steps})
+                print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f'Win: {info["reward"]}', 'Returns: %.4f' % returns, f"Entropy: {ent_str}", sep=' | ')
             elif self.env_type == Env.MAMUJOCO or self.env_type == Env.PETTINGZOO:
                 wandb.log({'rew_per_step': info["reward"], 'steps': cur_steps})
                 print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f'Rew per step: {info["reward"]}', 'Returns: %.4f' % returns, f"Average std: {ent_str}", sep=' | ')
@@ -132,7 +135,16 @@ class DreamerRunner:
                 eval_win_rates.append(eval_win_rate)
                 eval_ret_list.append(eval_returns)
 
-                if self.env_type == Env.STARCRAFT:
+                # Save PKL data immediately after each evaluation
+                stored_dict = {
+                    'steps': np.array(steps),
+                    'eval_win_rates': np.array(eval_win_rates),
+                    'eval_returns': np.array(eval_ret_list),
+                }
+                with open(self.save_path, 'wb') as f:
+                    pickle.dump(stored_dict, f)
+
+                if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
                     print(f"Steps: {save_interval_steps}, Eval_win_rate: {eval_win_rate}, Eval_returns: {eval_returns}, Mean episode length {aver_eval_steps}")
 
                 elif self.env_type == Env.MAMUJOCO or self.env_type == Env.PETTINGZOO:
@@ -147,18 +159,6 @@ class DreamerRunner:
                 break
             
             self.server.append(info['idx'], self.learner.params())
-
-        # store log data locally
-        steps = np.array(steps)
-        eval_win_rates = np.array(eval_win_rates)
-        eval_ret = np.array(eval_ret_list)
-        stored_dict = {
-            'steps': steps,
-            'eval_win_rates': eval_win_rates,
-            'eval_returns': eval_ret,
-        }
-        with open(self.save_path, 'wb') as f:
-            pickle.dump(stored_dict, f)
     
     # only train the actor and critic
     def train_actor(self, world_model_path, max_steps=10 ** 10, max_episodes=10 ** 10):

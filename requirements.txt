@@ -35,6 +35,9 @@ importlib-metadata==6.7.0
 importlib-resources==1.5.0
 ipdb==0.13.13
 ipython==7.34.0
+jax[cpu]==0.4.31
+jaxlib
+jaxmarl
 jax-jumpy==1.0.0
 jedi==0.19.2
 Jinja2==3.0.3

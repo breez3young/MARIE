@@ -216,7 +216,7 @@ class MAWorldModelEnv:
             # rec has been clamped into [-1, 1] during the decoding process
             rec = self.tokenizer.decode(self.obs_tokens, should_postprocess=True)
 
-            if self.env_type == Env.STARCRAFT:
+            if self.env_type in [Env.STARCRAFT, Env.SMAX]:
                 return rec.clamp(-1., 1.)
             elif self.env_type == Env.PETTINGZOO:
                 return rec

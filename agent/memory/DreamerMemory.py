@@ -26,7 +26,7 @@ class DreamerMemory:
         self.observations = np.empty((self.capacity, n_agents, self.obs_size), dtype=np.float32)
         self.actions = np.empty((self.capacity, n_agents, self.action_size), dtype=np.float32)
         self.av_actions = np.empty((self.capacity, n_agents, self.action_size),
-                                   dtype=np.float32) if env_type == Env.STARCRAFT else None
+                                   dtype=np.float32) if env_type in [Env.STARCRAFT, Env.SMAX] else None
         self.rewards = np.empty((self.capacity, n_agents, 1), dtype=np.float32)
         self.dones = np.empty((self.capacity, n_agents, 1), dtype=np.float32)
         self.fake = np.empty((self.capacity, n_agents, 1), dtype=np.float32)
@@ -78,7 +78,7 @@ class DreamerMemory:
         observation = self.process_batch(self.observations, vec_idxs, batch_size)[1:]
         reward = self.process_batch(self.rewards, vec_idxs, batch_size)[:-1]
         action = self.process_batch(self.actions, vec_idxs, batch_size)[:-1]
-        av_action = self.process_batch(self.av_actions, vec_idxs, batch_size)[1:] if self.env_type == Env.STARCRAFT else None
+        av_action = self.process_batch(self.av_actions, vec_idxs, batch_size)[1:] if self.env_type in [Env.STARCRAFT, Env.SMAX] else None
         done = self.process_batch(self.dones, vec_idxs, batch_size)[:-1]
         fake = self.process_batch(self.fake, vec_idxs, batch_size)[1:]
         last = self.process_batch(self.last, vec_idxs, batch_size)[1:]
@@ -95,7 +95,7 @@ class DreamerMemory:
         observation = self.process_batch(self.observations, vec_idxs, batch_size)
         reward = self.process_batch(self.rewards, vec_idxs, batch_size)
         action = self.process_batch(self.actions, vec_idxs, batch_size)
-        av_action = self.process_batch(self.av_actions, vec_idxs, batch_size) if self.env_type == Env.STARCRAFT else None
+        av_action = self.process_batch(self.av_actions, vec_idxs, batch_size) if self.env_type in [Env.STARCRAFT, Env.SMAX] else None
         done = self.process_batch(self.dones, vec_idxs, batch_size)
         fake = self.process_batch(self.fake, vec_idxs, batch_size)
         last = self.process_batch(self.last, vec_idxs, batch_size)
@@ -213,7 +213,7 @@ class DreamerMemory:
         observation = self.process_batch(self.observations, vec_idxs, batch_size, sl)
         reward = self.process_batch(self.rewards, vec_idxs, batch_size, sl)
         action = self.process_batch(self.actions, vec_idxs, batch_size, sl)
-        av_action = self.process_batch(self.av_actions, vec_idxs, batch_size, sl) if self.env_type == Env.STARCRAFT else None
+        av_action = self.process_batch(self.av_actions, vec_idxs, batch_size, sl) if self.env_type in [Env.STARCRAFT, Env.SMAX] else None
         done = self.process_batch(self.dones, vec_idxs, batch_size, sl)
         fake = self.process_batch(self.fake, vec_idxs, batch_size, sl)
         last = self.process_batch(self.last, vec_idxs, batch_size, sl)

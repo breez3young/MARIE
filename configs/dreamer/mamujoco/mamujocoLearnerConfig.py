@@ -5,26 +5,6 @@ from configs.dreamer.mamujoco.mamujocoAgentConfig import MAMujocoDreamerConfig
 class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
     def __init__(self):
         super().__init__()
-        # self.MODEL_LR = 2e-4
-        # self.ACTOR_LR = 5e-4
-        # self.VALUE_LR = 5e-4
-        # self.CAPACITY = 500000 # 这个buffer的长度刚好就是想要训练到的最大步长
-        # self.MIN_BUFFER_SIZE = 100
-        # self.MODEL_EPOCHS = 1
-        # self.EPOCHS = 1
-        # self.PPO_EPOCHS = 5
-        # self.MODEL_BATCH_SIZE = 40
-        # self.BATCH_SIZE = 40
-        # self.SEQ_LENGTH = 50
-        # self.N_SAMPLES = 1
-        # self.TARGET_UPDATE = 1
-        # self.DEVICE = 'cpu'
-        # self.GRAD_CLIP = 100.0
-        # self.HORIZON = 15
-        # self.ENTROPY = 0.001
-        # self.ENTROPY_ANNEALING = 0.99998
-        # self.GRAD_CLIP_POLICY = 100.
-
         # optimal smac config
         self.MODEL_LR = 2e-4
         self.ACTOR_LR = 5e-4  # 5e-4

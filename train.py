@@ -5,9 +5,8 @@ import datetime
 from pathlib import Path
 
 from agent.runners.DreamerRunner import DreamerRunner
-from configs import Experiment, SimpleObservationConfig, NearRewardConfig, DeadlockPunishmentConfig, RewardsComposerConfig
-from configs.EnvConfigs import EnvCurriculumConfig, StarCraftConfig, PettingZooConfig, FootballConfig, MAMujocoConfig
-from configs.flatland.RewardConfigs import FinishRewardConfig
+from configs import Experiment
+from configs.EnvConfigs import EnvCurriculumConfig, StarCraftConfig, PettingZooConfig, FootballConfig, MAMujocoConfig, SMAXConfig
 
 
 from configs.dreamer.DreamerControllerConfig import DreamerControllerConfig
@@ -24,10 +23,12 @@ from configs.dreamer.football.GRFControllerConfig import GRFDreamerControllerCon
 from configs.dreamer.mamujoco.mamujocoLearnerConfig import MAMujocoDreamerLearnerConfig
 from configs.dreamer.mamujoco.mamujocoControllerConfig import MAMujocoDreamerControllerConfig
 
+# for SMAX
+from configs.dreamer.smax.SMAXLearnerConfig import SMAXDreamerLearnerConfig
+from configs.dreamer.smax.SMAXControllerConfig import SMAXDreamerControllerConfig
 
-from configs.flatland.TimetableConfigs import AllAgentLauncherConfig
-from env.flatland.params import SeveralAgents, PackOfAgents, LotsOfAgents
-from environments import Env, FlatlandType, FLATLAND_OBS_SIZE, FLATLAND_ACTION_SIZE
+
+from environments import Env
 from utils import generate_group_name, format_numel_str_deci
 
 import torch
@@ -91,12 +92,6 @@ def get_env_info(configs, env):
     env.close()
 
 
-def get_env_info_flatland(configs):
-    for config in configs:
-        config.IN_DIM = FLATLAND_OBS_SIZE
-        config.ACTION_SIZE = FLATLAND_ACTION_SIZE
-
-
 def prepare_starcraft_configs(env_name):
     agent_configs = [DreamerControllerConfig(), DreamerLearnerConfig()]
     env_config = StarCraftConfig(env_name, RANDOM_SEED)
@@ -106,28 +101,6 @@ def prepare_starcraft_configs(env_name):
             "learner_config": agent_configs[1],
             "reward_config": None,
             "obs_builder_config": None}
-
-def prepare_flatland_configs(env_name):
-    if env_name == FlatlandType.FIVE_AGENTS:
-        env_config = SeveralAgents(RANDOM_SEED + 100)
-    elif env_name == FlatlandType.TEN_AGENTS:
-        env_config = PackOfAgents(RANDOM_SEED + 100)
-    elif env_name == FlatlandType.FIFTEEN_AGENTS:
-        env_config = LotsOfAgents(RANDOM_SEED + 100)
-    else:
-        raise Exception("Unknown flatland environment")
-    obs_builder_config = SimpleObservationConfig(max_depth=3, neighbours_depth=3,
-                                                 timetable_config=AllAgentLauncherConfig())
-    reward_config = RewardsComposerConfig((FinishRewardConfig(finish_value=10),
-                                           NearRewardConfig(coeff=0.01),
-                                           DeadlockPunishmentConfig(value=-5)))
-    agent_configs = [DreamerControllerConfig(), DreamerLearnerConfig()]
-    get_env_info_flatland(agent_configs)
-    return {"env_config": (env_config, 100),
-            "controller_config": agent_configs[0],
-            "learner_config": agent_configs[1],
-            "reward_config": reward_config,
-            "obs_builder_config": obs_builder_config}
 
 def prepare_pettingzoo_configs(env_name, continuous_action = True):
     agent_configs = [MPEDreamerControllerConfig(), MPEDreamerLearnerConfig()]
@@ -159,14 +132,24 @@ def prepare_mamujoco_configs(scenario, agent_config):
             "reward_config": None,
             "obs_builder_config": None}
 
+def prepare_smax_configs(env_name):
+    agent_configs = [SMAXDreamerControllerConfig(), SMAXDreamerLearnerConfig()]
+    env_config = SMAXConfig(env_name, RANDOM_SEED)
+    get_env_info(agent_configs, env_config.create_env())
+    return {"env_config": (env_config, 5000),
+            "controller_config": agent_configs[0],
+            "learner_config": agent_configs[1],
+            "reward_config": None,
+            "obs_builder_config": None}
+
 if __name__ == "__main__":
     RANDOM_SEED = 23
     args = parse_args()
     RANDOM_SEED += args.seed * 100
-    if args.env == Env.FLATLAND:
-        configs = prepare_flatland_configs(args.env_name)
-    elif args.env == Env.STARCRAFT:
+    if args.env == Env.STARCRAFT:
         configs = prepare_starcraft_configs(args.env_name)
+    elif args.env == Env.SMAX:
+        configs = prepare_smax_configs(args.env_name)
     elif args.env == Env.PETTINGZOO:
         configs = prepare_pettingzoo_configs(args.env_name, continuous_action=True)
     elif args.env == Env.GRF:

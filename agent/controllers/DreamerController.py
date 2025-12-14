@@ -37,14 +37,14 @@ class DreamerController:
             raise NotImplementedError
 
         if not config.use_stack:
-            if config.CONTINUOUS_ACTION or self.env_type != Env.STARCRAFT:
+            if config.CONTINUOUS_ACTION or self.env_type not in [Env.STARCRAFT, Env.SMAX]:
                 self.actor = StochasticPolicy(config.IN_DIM, config.ACTION_SIZE, config.ACTION_HIDDEN, config.ACTION_LAYERS,
                                               continuous_action=config.CONTINUOUS_ACTION, continuous_action_space=config.ACTION_SPACE)
             else:
                 self.actor = Actor(config.IN_DIM, config.ACTION_SIZE, config.ACTION_HIDDEN, config.ACTION_LAYERS)
 
         else:
-            if config.CONTINUOUS_ACTION or self.env_type != Env.STARCRAFT:
+            if config.CONTINUOUS_ACTION or self.env_type not in [Env.STARCRAFT, Env.SMAX]:
                 self.actor = StochasticPolicy(config.IN_DIM * config.stack_obs_num, config.ACTION_SIZE, config.ACTION_HIDDEN, config.ACTION_LAYERS,
                                               continuous_action=config.CONTINUOUS_ACTION, continuous_action_space=config.ACTION_SPACE)
             else:

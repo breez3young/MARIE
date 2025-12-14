@@ -2,19 +2,24 @@
 
 Code for the paper *Decentralized Transformers with Centralized Aggregation are Sample-Efficient Multi-Agent World Models*. [Paper link](https://openreview.net/forum?id=xT8BEgXmVc)
 
+## News
+
+🎉 **[2025-12]** MARIE now supports **SMAX** (JAX-based StarCraft Multi-Agent Challenge) with 14 available maps! We provide CPU-only JAX integration to ensure compatibility with Ray distributed workers. See [smax-integration.md](smax-integration.md) for detailed usage.
+
+🎉 **[2025-02]** We open-source the codebase of MARIE.
+
 ## Installation
 
-`python3.7` is required
+`python3.10+` is required
 
-```
+```bash
 pip install wheel
-# Note: we don't run exp on Flatland. It only serves for running the code without errors.
-pip install flatland-2.2.2/
 
 # install torch
 conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia
 
-pip install git+https://github.com/oxwhirl/smac.git
+# install ray for distributed workers
+pip install ray==2.7.2
 
 ```
 
@@ -23,6 +28,22 @@ We currently implement the interfaces for common MARL environments and they can 
 ### Installing SMAC (Main exp)
 
 Please follow [the official instructions](https://github.com/oxwhirl/smac) to install SMAC.
+
+```bash
+pip install git+https://github.com/oxwhirl/smac.git
+```
+
+### Installing SMAX (StarCraft Multi-Agent Challenge with JAX)
+
+SMAX is a JAX-based StarCraft Multi-Agent Challenge environment via JaxMARL. We use CPU-only JAX to avoid CUDA issues with Ray workers.
+
+```bash
+pip install "jax[cpu]==0.4.31"
+pip install jaxlib
+pip install jaxmarl
+```
+
+For detailed SMAX integration information, see [smax-integration.md](smax-integration.md).
 
 ### Installing Google Research Football (Deprecated)
 
@@ -53,13 +74,13 @@ Encounter any issues with the usage of Mujoco? Refer to [this troubleshooting pa
 
 An example for running MARIE on a specific environment
 
-```
+```bash
 python3 train.py --n_workers 1 --env <ENV> --env_name <SCENARIO_NAME> --seed <SEED> --agent_conf <AGENT_CONF> \
   --steps <TOTAL_STEPS> --mode <WANDB_LOG_MODE> --tokenizer <TOKENIZER_CLASS> --decay 0.8 \
   --temperature <POLICY_TEMPERATURE> --sample_temp <SAMPLING_TEMPERATURE> --ce_for_av 
 ```
 
-- ```ENV```: which environment to evaluate MARIE on. Four options: starcraft, football, pettingzoo, mamujoco
+- ```ENV```: which environment to evaluate MARIE on. Five options: starcraft, smax, football, pettingzoo, mamujoco
 - ```SCENARIO_NAME```: which scenario or map to evaluate MARIE on. For example, in SMAC, we can set SCENARIO_NAME as *1c3s5z* to evaluate.
 - ```AGENT_CONF```: which agent splitting configure to use in MAMujco. Only valid in running experiments on MAMujoco.
 - ```TOTAL_STEPS```: the maximum environment steps in the low data regime.
@@ -74,8 +95,23 @@ Across all experiments in our work, we always set SAMPLING_TEMPERATURE as 'inf',
 ![1](figures/marie_1.png)
 ![1](figures/marie_2.png)
 on SMAC
+```bash
+python train.py \
+  --n_workers 1 \
+  --env starcraft \
+  --env_name ${map_name} \
+  --seed 1 \
+  --steps 100000 \
+  --mode online \
+  --tokenizer vq --decay 0.8 \
+  --temperature 1.0 --sample_temp inf \
+  --ce_for_av
 ```
-python train.py --n_workers 1 --env starcraft --env_name ${map_name} --seed 1 (or 2, 3, 4) --steps 100000 --mode online \
+
+on SMAX (JAX-based StarCraft Multi-Agent Challenge)
+```bash
+# Available maps: 3m, 2s3z, 25m, 3s5z, 8m, 5m_vs_6m, 10m_vs_11m, 27m_vs_30m, 3s5z_vs_3s6z, 3s_vs_5z, 6h_vs_8z, smacv2_5_units, smacv2_10_units, smacv2_20_units
+python train.py --n_workers 1 --env smax --env_name ${map_name} --seed 1 --steps 1500000 --mode disabled \
   --tokenizer vq --decay 0.8 --temperature 1.0 --sample_temp inf --ce_for_av
 ```
 It is worth noting that:
@@ -87,12 +123,22 @@ It is worth noting that:
 ![1](figures/marie_3.png)
 on MAMujoco
 
-```
+```bash
 python train.py --n_workers 1 --env mamujoco --env_name ${map_name} --seed ${seed} --agent_conf ${agent_conf} --steps 1000000 \
   --mode online --tokenizer vq --decay 0.8 --temperature 1.0 --sample_temp inf --ce_for_r
 ```
 
 on Gfootball, although we have not reported corresponding results in the paper yet, in our early experiments, we recommend the readers to use ```--tokenizer fsq``` to run MARIE, which can robustly discretize the observation in the gfootball env.
+
+### PKL Data Export
+
+MARIE automatically saves evaluation results as PKL files for research analysis. The PKL files are saved continuously during training:
+
+- **Frequency**: Every 500 environment steps (after each evaluation)
+- **Location**: `{date}_results/{env}/{map_name}-{tokenizer}/run{run_id}/marie_{map_name}_seed{seed}.pkl`
+- **Format**: Dictionary with keys `['steps', 'eval_win_rates', 'eval_returns']`
+
+This continuous saving ensures no data loss if training is interrupted.
 
 
 

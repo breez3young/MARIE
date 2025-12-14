@@ -2,7 +2,6 @@ from copy import deepcopy
 
 import ray
 import torch
-from flatland.envs.agent_utils import RailAgentStatus
 from collections import defaultdict
 
 from environments import Env
@@ -22,17 +21,14 @@ class DreamerWorker:
     def _check_handle(self, handle):
         if self.env_type == Env.STARCRAFT:
             return self.done[handle] == 0
+        elif self.env_type == Env.SMAX:
+            return self.done[handle] == 0
         elif self.env_type == Env.PETTINGZOO:
             return self.done[handle] == 0
         elif self.env_type == Env.GRF:
             return self.done[handle] == 0
-        
         elif self.env_type == Env.MAMUJOCO:
             return self.done[handle] == 0
-
-        elif self.env_type == Env.FLATLAND:
-            return self.env.agents[handle].status in (RailAgentStatus.ACTIVE, RailAgentStatus.READY_TO_DEPART) \
-                   and not self.env.obs_builder.deadlock_checker.is_deadlocked(handle)
         else:
             raise NotImplementedError(f"{self.env_type} is currently not supported.")
 
@@ -40,17 +36,10 @@ class DreamerWorker:
         avail_actions = []
         observations = []
         fakes = []
-        if self.env_type == Env.FLATLAND:
-            nn_mask = (1. - torch.eye(self.env.n_agents)).bool()
-        else:
-            nn_mask = None
+        nn_mask = None
 
         for handle in range(self.env.n_agents):
-            if self.env_type == Env.FLATLAND:
-                for opp_handle in self.env.obs_builder.encountered[handle]:
-                    if opp_handle != -1:
-                        nn_mask[handle, opp_handle] = False
-            elif self.env_type == Env.STARCRAFT:
+            if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
                 avail_actions.append(torch.tensor(self.env.get_avail_agent_actions(handle)))
 
             if self._check_handle(handle) and handle in state:
@@ -61,12 +50,10 @@ class DreamerWorker:
                 observations.append(self.get_absorbing_state())
             else:
                 fakes.append(torch.zeros(1, 1))
-                obs = torch.tensor(self.env.obs_builder._get_internal(handle)).float().unsqueeze(0)
-                observations.append(obs)
+                observations.append(torch.zeros(1, self.in_dim))
 
         observations = torch.cat(observations).unsqueeze(0)
         av_action = torch.stack(avail_actions).unsqueeze(0) if len(avail_actions) > 0 else None
-        nn_mask = nn_mask.unsqueeze(0).repeat(8, 1, 1) if nn_mask is not None else None
         actions, ent = self.controller.step(observations, av_action, nn_mask)
         return actions, observations, torch.cat(fakes).unsqueeze(0), av_action, ent
 
@@ -103,7 +90,7 @@ class DreamerWorker:
 
     def run(self, dreamer_params):
         self.controller.receive_params(dreamer_params)
-        if self.env_type == Env.STARCRAFT:
+        if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
             state = self._wrap(self.env.reset())
         elif self.env_type == Env.PETTINGZOO:
             state, shared_obs, _ = self.env.reset()
@@ -115,7 +102,7 @@ class DreamerWorker:
             state, shared_obs, _ = self.env.reset()
             state = self._wrap(state)
         else:
-            raise NotImplementedError(f'Currently we donot support {Env.MAMUJOCO} env.')
+            raise NotImplementedError(f'Currently we do not support {self.env_type} env.')
             
         steps_done = 0
         self.done = defaultdict(lambda: False)
@@ -126,7 +113,7 @@ class DreamerWorker:
         while True:
             steps_done += 1
             actions, obs, fakes, av_actions, ent = self._select_actions(state)
-            if self.env_type == Env.STARCRAFT:
+            if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
                 next_state, reward, done, info = self.env.step([action.argmax() for i, action in enumerate(actions)])
             elif self.env_type == Env.PETTINGZOO:
                 next_state, shared_obs, reward, done, info, _ = self.env.step(actions)
@@ -172,13 +159,8 @@ class DreamerWorker:
 
                 break
 
-        if self.env_type == Env.FLATLAND:
-            reward = sum(
-                [1 for agent in self.env.agents if agent.status == RailAgentStatus.DONE_REMOVED]) / self.env.n_agents
-        
-        elif self.env_type == Env.STARCRAFT:
+        if self.env_type == Env.STARCRAFT or self.env_type == Env.SMAX:
             reward = 1. if 'battle_won' in info and info['battle_won'] else 0.
-        
         elif self.env_type == Env.PETTINGZOO:
             rew_per_step = np.mean(rewards_list)
             reward = rew_per_step
